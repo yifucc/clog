@@ -5,4 +5,4 @@ WORKDIR /usr/src/app
 COPY . .
 RUN go build -o ccblog .
 EXPOSE 8888
-ENTRYPOINT ["./ccblog --env prod"]
+ENTRYPOINT ["./ccblog", "--env", "prod"]
