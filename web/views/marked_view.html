@@ -1,0 +1,84 @@
+{% block "navbar" . %}{% end %}
+
+<b-container class="content-container">
+<b-row>
+    <b-col md="9">
+        <div class="blog-view">
+            <div class="blog-view-header">
+                <h2>{{data.title}}</h2>
+                <div class="blog-view-tag">
+                    <ul>
+                        <li>
+                            <i class="fa fa-calendar" class="icon"></i>
+                            <span>发表于{{data.create_time | formatTimer}} | 更新于{{data.update_time | formatTimer}}</span>
+                        </li>
+                        <li class="tag"><i class="fa fa-folder-open" class="icon"></i><a>{{data.category}}</a></li>
+                    </ul>
+
+                    <!--
+                    <div class="blog-edit">
+                        <a href="">
+                            <i class="fa fa-github"></i>
+                            <span>修改原文</span>
+                        </a>
+                    </div>
+                    -->
+                </div>
+            </div>
+            <div v-html="marked(data.body)" class="view-marked"></div>
+        </div>
+    </b-col>
+    <b-col md="3">
+        {% block "slider" . %}{% end %}
+    </b-col>
+</b-row>
+</b-container>
+
+{% block "footer" . %}{% end %}
+
+<script type="text/javascript">
+    var app = new Vue({
+        el: "#vue",
+        data:{
+            data:[],
+            menu:[],
+            cate:[],
+            slider:{},
+            paht: ''
+        },
+        created(){
+            //接收值 |raw 不转义输出
+            this.data = JSON.parse('{%.data%}');
+            this.menu = JSON.parse('{%.menu%}');
+            this.cate = JSON.parse('{%.cate%}');
+            this.slider = JSON.parse('{%.slider%}');
+
+            var index = window.location.pathname.lastIndexOf("\/");
+            this.path = window.location.pathname.substring(0, index);
+
+            hljs.initHighlightingOnLoad()
+        },
+        methods:{
+            marked(md){
+                return marked(md);
+            }
+        },
+        filters: {
+            formatTimer: function(value) {
+                let date = new Date(value);
+                let y = date.getFullYear();
+                let MM = date.getMonth() + 1;
+                MM = MM < 10 ? "0" + MM : MM;
+                let d = date.getDate();
+                d = d < 10 ? "0" + d : d;
+                let h = date.getHours();
+                h = h < 10 ? "0" + h : h;
+                let m = date.getMinutes();
+                m = m < 10 ? "0" + m : m;
+                let s = date.getSeconds();
+                s = s < 10 ? "0" + s : s;
+                return y + "-" + MM + "-" + d;
+            }
+        }
+    });
+</script>

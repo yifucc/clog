@@ -1,0 +1,126 @@
+{% block "navbar" . %}{% end %}
+
+<b-container class="content-container">
+    <b-row>
+        <b-col md="9">
+            <div class="article-list">
+                <ul v-if="data.length > 0">
+                    <li v-for="item in data" :key="item.id">
+                        <a :href="'/docs'+item.path" v-if="item.type == 1"><h2>{{item.title}}</h2></a>
+                        <a :href="'/docs'+ item.path" v-else>
+                            <h2><span v-if="item.book_name">[{{item.book_name}}]: </span>{{item.title}}</h2>
+                        </a>
+                        <div class="blog-view-tag">
+                            <ul>
+                                <li><i class="fa fa-calendar" class="icon"></i><span>发表于{{item.create_time | formatTimer}}</span></li>
+                                <li class="tag"><i class="fa fa-folder-open" class="icon"></i><a>{{item.category}}</a></li>
+                            </ul>
+                        </div>
+                        <div v-html="marked(item.description)" class="view-marked"></div>
+                        <div class="read-all">
+                            <a :href="'/docs'+item.path" v-if="item.type == 1">
+                                阅读全文
+                            </a>
+                            <a :to="'article/'+item.article_id" v-else>
+                                阅读全文
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+                <ul v-else>
+                    <li>空空如也~</li>
+                </ul>
+
+                <div class="page-list" v-show="page_show">
+                    <b-pagination
+                            v-model="page"
+                            pills
+                            :total-rows="records"
+                            :per-page="perPage"
+                            align="center"
+                            @change="skip"
+                            prev-text="Previous"
+                            next-text="Next"
+                            first-number
+                            last-number
+                    ></b-pagination>
+                </div>
+
+
+<!--                 <pagination v-model="page" :records="records" :per-page="perPage" :options="options" @paginate="newpage"></pagination>-->
+            </div>
+        </b-col>
+
+        <b-col md="3">
+            {% block "slider" . %}{% end %}
+        </b-col>
+    </b-row>
+</b-container>
+
+{% block "footer" . %}{% end %}
+
+<script type="text/javascript">
+    var app = new Vue({
+        el: "#vue",
+        data:{
+            //接收值 |raw 不转义输出
+            data: [],
+            menu: [],
+            cate: [],
+            slider:{},
+            page:1,
+            records:10,
+            perPage:10,
+            options:{
+                chunk:10,
+                theme: 'bootstrap3',
+            },
+            page_show:false,
+            path: ''
+        },
+        created(){
+            this.data = JSON.parse('{%.data%}')
+            this.menu = JSON.parse('{%.menu%}')
+            this.cate = JSON.parse('{%.cate%}')
+            this.slider = JSON.parse('{%.slider%}')
+            this.page = parseInt('{%.page%}')
+            this.records = parseInt('{%.records%}')
+            this.perPage = parseInt('{%.perPage%}')
+            this.path = window.location.pathname
+
+            if(this.records / this.perPage > 1) { this.page_show = true }
+
+            hljs.initHighlightingOnLoad()
+        },
+        methods:{
+            marked(desc){
+                return marked(desc)
+            },
+            skip(page){
+                window.location.href = location.protocol + '//' + location.host + location.pathname + '?page=' + page
+            }
+        },
+        filters: {
+            formatTimer: function(value) {
+                let date = new Date(value);
+                let y = date.getFullYear();
+                let MM = date.getMonth() + 1;
+                MM = MM < 10 ? "0" + MM : MM;
+                let d = date.getDate();
+                d = d < 10 ? "0" + d : d;
+                let h = date.getHours();
+                h = h < 10 ? "0" + h : h;
+                let m = date.getMinutes();
+                m = m < 10 ? "0" + m : m;
+                let s = date.getSeconds();
+                s = s < 10 ? "0" + s : s;
+                return y + "-" + MM + "-" + d;
+            }
+        },
+        // watch:{
+        //     page:function(newl){
+        //         window.location.href = location.protocol + '//' + location.host + location.pathname + '?page=' + this.page
+        //     }
+        // }
+    });
+</script>
