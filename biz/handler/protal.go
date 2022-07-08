@@ -115,7 +115,7 @@ func Webhook(ctx iris.Context) {
 	key := fmt.Sprintf("%s\n%s", time, config.Conf.CodeRepoSecret)
 	h := hmac.New(sha256.New, []byte(config.Conf.CodeRepoSecret))
 	h.Write([]byte(key))
-	sign := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	sign := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	if token != sign {
 		ctx.StatusCode(400)
 		return
