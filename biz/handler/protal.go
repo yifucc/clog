@@ -5,11 +5,19 @@ import (
 	"cc_blog/config"
 	"crypto/hmac"
 	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/kataras/iris/v12"
-	"io/ioutil"
+	ssh2 "golang.org/x/crypto/ssh"
+	"log"
+	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -17,6 +25,23 @@ import (
 )
 
 var blogService service.BlogService = &service.BlogServiceImpl{}
+var auth transport.AuthMethod
+
+func init() {
+	switch config.Conf.CodeRepoAuthType {
+	case config.PrivateKeyType:
+		privateKeys, _ := ssh.NewPublicKeysFromFile("git", fmt.Sprintf("%s/%s", config.GetConfigDir(), "private_key.perm"), "")
+		privateKeys.HostKeyCallback = func(hostname string, remote net.Addr, key ssh2.PublicKey) error {
+			return nil
+		}
+		auth = privateKeys
+	case config.PasswordType:
+		auth = &http.BasicAuth{
+			Username: config.Conf.CodeRepoAuthUser,
+			Password: config.Conf.CodeRepoAuthPassword,
+		}
+	}
+}
 
 func Site(ctx iris.Context) {
 	ctx.ViewData("title", config.Conf.Name)
@@ -85,12 +110,14 @@ func ArticleDetail(ctx iris.Context) {
 }
 
 func Webhook(ctx iris.Context) {
-	sign := ctx.GetHeader("X-Hub-Signature")
-	body, err := ioutil.ReadAll(ctx.Request().Body)
-	if err != nil {
-		return
-	}
-	if !checkSign(sign, body) {
+	time := ctx.GetHeader("X-Gitee-Timestamp")
+	token := ctx.GetHeader("X-Gitee-Token")
+	key := fmt.Sprintf("%s\n%s", time, config.Conf.CodeRepoSecret)
+	sha := sha256.New()
+	sha.Write([]byte(key))
+	sign := base64.URLEncoding.EncodeToString([]byte(base64.StdEncoding.EncodeToString(sha.Sum(nil))))
+	if token != sign {
+		ctx.StatusCode(400)
 		return
 	}
 	updateResource()
@@ -98,20 +125,26 @@ func Webhook(ctx iris.Context) {
 }
 
 func updateResource() {
-	_, err := git.PlainClone(config.Conf.RootDir, false, &git.CloneOptions{
-		URL: config.Conf.GithubAddress,
-	})
 	repo, err := git.PlainOpen(config.Conf.RootDir)
 	if err != nil {
+		log.Printf("open resource dir error: %s", err.Error())
 		repo, err = git.PlainClone(config.Conf.RootDir, false, &git.CloneOptions{
-			URL: config.Conf.GithubAddress,
+			URL:  config.Conf.CodeRepoAddress,
+			Auth: auth,
 		})
+		if err != nil {
+			log.Printf("clone resource dir error: %s", err.Error())
+		}
 	} else {
 		worktree, _ := repo.Worktree()
 		err = worktree.Pull(&git.PullOptions{
 			RemoteName: "origin",
 			Force:      true,
+			Auth:       auth,
 		})
+		if err != nil {
+			log.Printf("pull resource dir error: %s", err.Error())
+		}
 	}
 }
 
@@ -119,7 +152,7 @@ func checkSign(sign string, body []byte) bool {
 	if len(sign) != 45 || !strings.HasPrefix(sign, "sha1=") {
 		return false
 	}
-	secret := []byte(config.Conf.GithubSecret)
+	secret := []byte(config.Conf.CodeRepoSecret)
 	mac := hmac.New(sha1.New, secret)
 	mac.Write(body)
 	key := mac.Sum(nil)

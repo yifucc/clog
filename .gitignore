@@ -4,3 +4,4 @@
 /output
 /resource
 /config/*.yml
+/config/*.perm
