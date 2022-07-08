@@ -14,7 +14,7 @@ func customizedRegister(app *iris.Application) {
 	app.RegisterView(html)
 	app.HandleDir("/static", iris.Dir("./web/static"))
 	app.HandleDir("/img", iris.Dir(config.Conf.ImgDir))
-	app.Get("/api/webhook", handler.Webhook)
+	app.Post("/api/webhook", handler.Webhook)
 	root := app.Party("/", handler.Site, handler.Navbar, handler.Categories, handler.Slider)
 	root.Get("/", handler.ArticleList)
 	docs := root.Party("/docs")
