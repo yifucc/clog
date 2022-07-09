@@ -2,6 +2,7 @@ package service
 
 import (
 	"bufio"
+	"cc_blog/biz/common"
 	"cc_blog/biz/model"
 	"cc_blog/biz/util"
 	"cc_blog/config"
@@ -15,12 +16,22 @@ import (
 	"time"
 )
 
+const SegLine = "<br line/>"
+
 type BlogServiceImpl struct {
+}
+
+func (b *BlogServiceImpl) Refresh() error {
+	return util.ClearAllCache()
 }
 
 func (b *BlogServiceImpl) GetArticles(path string) (*model.Articles, error) {
 	list := model.Articles{}
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := util.GetCache(common.Articles+path, &list)
+	if err == nil {
+		return &list, nil
+	}
+	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) == ".md" {
 			article, err := b.GetArticleBase(path)
 			if err != nil {
@@ -34,12 +45,17 @@ func (b *BlogServiceImpl) GetArticles(path string) (*model.Articles, error) {
 		return &list, err
 	}
 	sort.Sort(&list)
+	_ = util.SetCache(common.Articles+path, list)
 	return &list, nil
 }
 
 func (b *BlogServiceImpl) GetCategories() (*model.Categories, error) {
 	categories := model.Categories{}
-	err := filepath.Walk(config.Conf.DocDir, func(path string, info os.FileInfo, err error) error {
+	err := util.GetCache(common.Categories, &categories)
+	if err == nil {
+		return &categories, nil
+	}
+	err = filepath.Walk(config.Conf.DocDir, func(path string, info os.FileInfo, err error) error {
 		if path == config.Conf.DocDir {
 			return nil
 		}
@@ -51,28 +67,39 @@ func (b *BlogServiceImpl) GetCategories() (*model.Categories, error) {
 		}
 		return nil
 	})
+	_ = util.SetCache(common.Categories, categories)
 	return &categories, err
 }
 
 func (b *BlogServiceImpl) GetNavbar() (*model.Navbar, error) {
 	navbar := &model.Navbar{}
+	err := util.GetCache(common.Navbar, navbar)
+	if err == nil {
+		return navbar, nil
+	}
 	file, err := os.Open(filepath.Join(config.Conf.RootDir, "navbar.json"))
 	if err != nil {
 		return navbar, err
 	}
 	content, _ := ioutil.ReadAll(file)
 	_ = json.Unmarshal(content, navbar)
+	_ = util.SetCache(common.Navbar, navbar)
 	return navbar, nil
 }
 
 func (b *BlogServiceImpl) GetSlider() (*model.Slider, error) {
 	slider := &model.Slider{}
+	err := util.GetCache(common.Slider, slider)
+	if err == nil {
+		return slider, nil
+	}
 	file, err := os.Open(filepath.Join(config.Conf.RootDir, "app.json"))
 	if err != nil {
 		return slider, err
 	}
 	content, _ := ioutil.ReadAll(file)
 	_ = json.Unmarshal(content, slider)
+	_ = util.SetCache(common.Slider, slider)
 	return slider, nil
 }
 
@@ -101,7 +128,7 @@ func (b *BlogServiceImpl) GetArticleBase(name string) (*model.Article, error) {
 					continue
 				}
 			}
-			if strings.TrimSpace(line) == "<br desc/>" {
+			if strings.TrimSpace(line) == SegLine {
 				blockNum++
 				if blockNum == 2 {
 					break
@@ -138,6 +165,10 @@ func (b *BlogServiceImpl) GetArticleBase(name string) (*model.Article, error) {
 
 func (b *BlogServiceImpl) GetArticleDetail(name string) (*model.Article, error) {
 	result := &model.Article{}
+	err := util.GetCache(common.Article+name, result)
+	if err == nil {
+		return result, nil
+	}
 	if file, err := os.Open(name); err == nil {
 		defer file.Close()
 		reader := bufio.NewReader(file)
@@ -162,7 +193,7 @@ func (b *BlogServiceImpl) GetArticleDetail(name string) (*model.Article, error) 
 					continue
 				}
 			}
-			if strings.TrimSpace(line) == "<br desc/>" {
+			if strings.TrimSpace(line) == SegLine {
 				blockNum++
 				continue
 			}
@@ -190,6 +221,7 @@ func (b *BlogServiceImpl) GetArticleDetail(name string) (*model.Article, error) 
 			result.Path = string([]byte(name)[len(config.Conf.DocDir) : len(name)-3])
 			result.Type = 1
 		}
+		_ = util.SetCache(common.Article+name, result)
 		return result, err
 	} else {
 		return result, err

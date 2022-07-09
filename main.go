@@ -3,6 +3,7 @@
 package main
 
 import (
+	"cc_blog/biz/handler"
 	"cc_blog/config"
 	"fmt"
 	"github.com/kataras/iris/v12"
@@ -11,6 +12,7 @@ import (
 func main() {
 	app := iris.New()
 	app.Use(iris.Compression)
+	handler.InitResource()
 	customizedRegister(app)
 	addr := fmt.Sprintf(":%d", config.Conf.Port)
 	err := app.Listen(addr)

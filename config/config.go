@@ -11,6 +11,8 @@ import (
 const (
 	PasswordType   = "password"
 	PrivateKeyType = "privateKey"
+	Gitee          = "gitee"
+	Github         = "github"
 )
 
 type Config struct {

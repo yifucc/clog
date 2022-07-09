@@ -8,4 +8,5 @@ type BlogService interface {
 	GetNavbar() (*model.Navbar, error)
 	GetSlider() (*model.Slider, error)
 	GetArticleDetail(name string) (*model.Article, error)
+	Refresh() error
 }

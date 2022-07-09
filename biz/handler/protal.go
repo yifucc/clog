@@ -43,6 +43,10 @@ func init() {
 	}
 }
 
+func InitResource() {
+	updateResource()
+}
+
 func Site(ctx iris.Context) {
 	ctx.ViewData("title", config.Conf.Name)
 	ctx.ViewData("slogan", config.Conf.Slogan)
@@ -110,18 +114,28 @@ func ArticleDetail(ctx iris.Context) {
 }
 
 func Webhook(ctx iris.Context) {
+	switch config.Conf.CodeRepoType {
+	case config.Gitee:
+		if !checkGiteeSign(ctx) {
+			ctx.StatusCode(400)
+			return
+		}
+	default:
+		ctx.StatusCode(400)
+		return
+	}
+	updateResource()
+	ctx.StatusCode(200)
+}
+
+func checkGiteeSign(ctx iris.Context) bool {
 	time := ctx.GetHeader("X-Gitee-Timestamp")
 	token := ctx.GetHeader("X-Gitee-Token")
 	key := fmt.Sprintf("%s\n%s", time, config.Conf.CodeRepoSecret)
 	h := hmac.New(sha256.New, []byte(config.Conf.CodeRepoSecret))
 	h.Write([]byte(key))
 	sign := base64.StdEncoding.EncodeToString(h.Sum(nil))
-	if token != sign {
-		ctx.StatusCode(400)
-		return
-	}
-	updateResource()
-	ctx.StatusCode(200)
+	return token == sign
 }
 
 func updateResource() {
@@ -146,6 +160,8 @@ func updateResource() {
 			log.Printf("pull resource dir error: %s", err.Error())
 		}
 	}
+	err = blogService.Refresh()
+	log.Printf("refresh cache error, %v", err)
 }
 
 func checkSign(sign string, body []byte) bool {
