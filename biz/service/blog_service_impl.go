@@ -112,10 +112,11 @@ func (b *BlogServiceImpl) GetArticleBase(name string) (*model.Article, error) {
 		blockNum := 0
 		blockContent := ""
 		line := ""
-		for {
+		notHasError := true
+		for notHasError {
 			line, err = reader.ReadString('\n')
 			if err != nil {
-				break
+				notHasError = false
 			}
 			if line != "" && !hasBegin {
 				hasBegin = true
@@ -177,10 +178,11 @@ func (b *BlogServiceImpl) GetArticleDetail(name string) (*model.Article, error) 
 		descContent := ""
 		body := ""
 		line := ""
-		for {
+		notHasError := true
+		for notHasError {
 			line, err = reader.ReadString('\n')
 			if err != nil {
-				break
+				notHasError = false
 			}
 			if line != "" && !hasBegin {
 				hasBegin = true
