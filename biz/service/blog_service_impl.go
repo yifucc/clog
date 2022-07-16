@@ -16,7 +16,8 @@ import (
 	"time"
 )
 
-const SegLine = "<br line/>"
+const SegLineTag = "<br line/>"
+const DraftTag = "[draft]"
 
 type BlogServiceImpl struct {
 }
@@ -32,7 +33,7 @@ func (b *BlogServiceImpl) GetArticles(path string) (*model.Articles, error) {
 		return &list, nil
 	}
 	err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if filepath.Ext(path) == ".md" {
+		if filepath.Ext(path) == ".md" && !strings.HasPrefix(info.Name(), DraftTag) {
 			article, err := b.GetArticleBase(path)
 			if err != nil {
 				return err
@@ -62,7 +63,7 @@ func (b *BlogServiceImpl) GetCategories() (*model.Categories, error) {
 		if info.IsDir() {
 			categories = append(categories, &model.Category{Name: info.Name(), Path: info.Name(), Number: 0})
 		}
-		if filepath.Ext(path) == ".md" {
+		if filepath.Ext(path) == ".md" && !strings.HasPrefix(info.Name(), DraftTag) {
 			categories[len(categories)-1].Number++
 		}
 		return nil
@@ -129,7 +130,7 @@ func (b *BlogServiceImpl) GetArticleBase(name string) (*model.Article, error) {
 					continue
 				}
 			}
-			if strings.TrimSpace(line) == SegLine {
+			if strings.TrimSpace(line) == SegLineTag {
 				blockNum++
 				if blockNum == 2 {
 					break
@@ -195,7 +196,7 @@ func (b *BlogServiceImpl) GetArticleDetail(name string) (*model.Article, error) 
 					continue
 				}
 			}
-			if strings.TrimSpace(line) == SegLine {
+			if strings.TrimSpace(line) == SegLineTag {
 				blockNum++
 				continue
 			}
